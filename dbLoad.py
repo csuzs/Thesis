@@ -11,13 +11,19 @@ import scipy.io as sio
 import _pickle as pickle
 import matplotlib.pyplot as mpl
 ROOT_DIRECTION = '/home/zsombi/szakdoga/ninapro_classif/DB1'
-TO_SAVE_DIRECTION = '/media/zsombi/Data/szakdoga/probafilok/  '
+TO_SAVE_DIRECTION= '/media/zsombi/Data/szakdoga/DB1/train'
+TO_SAVE_DIRECTION_TEST = '/media/zsombi/Data/szakdoga/DB1/test'
+
+
+testDirectory = '/home/zsombi/szakdoga/ninapro_classif/DB1/s1'
+
+
 SAMPLING_RATE = 100  # Hz
 WINDOW_SIZE_IN_SAMPLES = 40  # 400 ms
 SLIDING_SIZE = 1  # 10 ms
 E1_num_of_classes = 12
 E2_num_of_classes = 17
-E3_num_if_classes = 23
+E3_num_of_classes = 23
 def load_data_into_pickles():
     for subdir, dirs, files in os.walk(ROOT_DIRECTION):
         for file in files:
@@ -48,6 +54,8 @@ def save_data_into_csv(root):
             filepath = subdir + os.sep + file
 
             if filepath.endswith(".mat"):
+
+
                 print('kezodik a feldolgozas:')
                 print(filepath)
                 data = load_data(filepath)
@@ -61,7 +69,7 @@ def save_data_into_csv(root):
 
                 rand.shuffle(order)
 
-                filename = file.replace('mat', 'csv')
+                filename = file.replace('.mat', '_windowed.csv')
                 fullfiledir = TO_SAVE_DIRECTION + filename
                 if windowed_datas.__contains__('inclin') & windowed_datas.__contains__('acc'):
                     with open(fullfiledir, 'w') as csvfile:
@@ -77,16 +85,26 @@ def save_data_into_csv(root):
                     labels = np.asarray(windowed_datas['label'])[order]
                     glove  = np.asarray(windowed_datas['glove'])[order]
                     emg = np.asarray(windowed_datas['emg'])[order]
+
+
+                    label_number_to_add = 0
+                    if(data['exercise'][0]==3):
+                        label_number_to_add=E2_num_of_classes
+                    elif(data['exercise'][0]==1):
+                        label_number_to_add=E2_num_of_classes+E3_num_of_classes
+
                     print(np.shape(labels))
                     print(np.shape(glove))
                     print(np.shape(emg))
-                    with open(fullfiledir.replace('.','_windowed_preprocessed_data.'),'wb') as f:
+                    with open(fullfiledir,'wb') as f:
                         for i in range(len(labels)):
-
+                            for j in range(len(labels[i])):
+                                if labels[i][j] != 0:
+                                    labels[i][j] +=label_number_to_add
                             np.savetxt(f,labels[i],delimiter=',',fmt = '%1.0i')
                             np.savetxt(f,emg[i][:][:],delimiter=',',fmt = '%1.7f')
                             np.savetxt(f,glove[i][:][:],delimiter=',',fmt='%1.7f')
-
+                    f.close()
 
 
 
@@ -101,7 +119,6 @@ def save_data_into_csv(root):
                         #with open(fullfiledir.replace('.', 'emg'), 'wb') as f:
                         #    for a in windowed_datas['emg'][:]:
                         #        np.savetxt(f,a,delimiter=',',fmt='%1.8f')
-
 
 
 def load_data(dir):
@@ -160,16 +177,14 @@ def setlabel(labels):
         return label_num
     else:
 
-        return np.zeros([1], dtype=np.int8)
+        return 0
 
 
 def get_windows(data):
     if not str(data.keys()).__contains__('inclin'):
-        # data_windows={'glove':[], 'emg':[], 'restimulus':[],'label':[]}
         data_windows = {'glove': [], 'emg': [], 'label': []}
     else:
 
-        # data_windows = {'glove': [], 'emg': [],'acc':[],'inclin':[], 'restimulus': [], 'label': []}
         data_windows = {'glove': [], 'emg': [], 'acc': [], 'inclin': [], 'label': []}
 
     i = 0
@@ -177,16 +192,18 @@ def get_windows(data):
     datasize = len(data['restimulus'])
     while j + WINDOW_SIZE_IN_SAMPLES < datasize:
         # windows.append(glovedata[j:j + WINDOW_SIZE_IN_SAMPLES])
-        data_windows['glove'].append(data['glove'][j:j + WINDOW_SIZE_IN_SAMPLES])
-        data_windows['emg'].append(data['emg'][j:j + WINDOW_SIZE_IN_SAMPLES])
+        if setlabel(data['restimulus'][j:j + WINDOW_SIZE_IN_SAMPLES]) != 0 :
 
-        if (data.__contains__('acc')):  # acc and inclin only occurs in DB2 and DB3
-            data_windows['acc'].append(data['acc'][j:j + WINDOW_SIZE_IN_SAMPLES])
-        if (data.__contains__('inclin')):
-            data_windows['inclin'].append(data['inclin'][j:j + WINDOW_SIZE_IN_SAMPLES])
+            data_windows['glove'].append(data['glove'][j:j + WINDOW_SIZE_IN_SAMPLES])
+            data_windows['emg'].append(data['emg'][j:j + WINDOW_SIZE_IN_SAMPLES])
 
-        # data_windows['restimulus'].append(restimulus[j:j+WINDOW_SIZE_IN_SAMPLES])
-        data_windows['label'].append(setlabel(data['restimulus'][j:j + WINDOW_SIZE_IN_SAMPLES]))
+            if (data.__contains__('acc')):  # acc and inclin only occurs in DB2 and DB3
+                data_windows['acc'].append(data['acc'][j:j + WINDOW_SIZE_IN_SAMPLES])
+            if (data.__contains__('inclin')):
+                data_windows['inclin'].append(data['inclin'][j:j + WINDOW_SIZE_IN_SAMPLES])
+
+            # data_windows['restimulus'].append(restimulus[j:j+WINDOW_SIZE_IN_SAMPLES])
+            data_windows['label'].append(setlabel(data['restimulus'][j:j + WINDOW_SIZE_IN_SAMPLES]))
 
         i = i + 1
         j = j + SLIDING_SIZE
@@ -199,37 +216,25 @@ def get_windows(data):
     # print('restimulus:')
     # print(np.shape(data_windows['restimulus']))
     print('label:')
-    print(np.shape(data_windows['label'])
-          )
+    print(np.shape(data_windows['label']))
     return data_windows
 
-
+    
 if __name__ == "__main__":
-    #save_data_into_csv('/home/zsombi/szakdoga/ninapro_classif/sample')
 
+
+    #save_data_into_csv('/home/zsombi/szakdoga/ninapro_classif/DB1/s1/')
     data = load_data('/home/zsombi/szakdoga/ninapro_classif/DB1/s1/S1_A1_E1.mat')
-    print('\n\n\n')
-    data2 = load_data('/home/zsombi/szakdoga/ninapro_classif/DB1/s1/S1_A1_E2.mat')
-    print('\n\n\n')
-    data3 = load_data('/home/zsombi/szakdoga/ninapro_classif/DB1/s1/S1_A1_E3.mat')
-    print('\n\n\n')
-    print('data3 minimuma:',min(data3["restimulus"]))
-    print('data3 maximuma:',max(data3["restimulus"]))
-    print('data1 minimuma:',min(data["restimulus"]))
-    print('data1 maximuma:',max(data["restimulus"]))
-    print('data2 minimuma:',min(data2["restimulus"]))
-    print('data2 maximuma:',max(data2["restimulus"]))
+    normalize_data(data)
+    mpl.plot(data['emg'])
+    mpl.plot(data['restimulus'])
+    mpl.show()
     # print(windowed_datas.keys())
     # print('\n',type(windowed_datas))
     # print(np.shape(windowed_datas['acc']))
     # load_data_into_pickles()
-    # data = load_data('/home/zsombi/szakdoga/ninapro_classif/DB1/s2/S2_A1_E2.mat')
     # pickle.dump(data,open('lelci.p','wb'))
     # d = pickle.load(open('lelci.p','rb'))
 
-    normalize_data(data3)
+
     #windowed_datas = get_windows(data)
-    mpl.plot(data['restimulus'])
-    mpl.plot(data2['restimulus'])
-    mpl.plot(data3['restimulus'])
-    mpl.show()

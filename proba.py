@@ -14,7 +14,7 @@ E3_num_if_classes = 23
 total_number_of_classes = 52 + 1 ## doing nothing is class 0
 
 
-batch_size = 32
+batch_size = 1
 def beolvasoproba():
     onefile = '/media/zsombi/Data/szakdoga/probafilok/  S1_A1_E1emgcsv'
 
@@ -183,6 +183,12 @@ def regiadattalmukodott():
 
 if __name__=="__main__":
 
+        train_path_array = ["/media/zsombi/Data/szakdoga/DB1/trainS19_A1_E1_windowed.csv",
+                        "/media/zsombi/Data/szakdoga/DB1/trainS19_A1_E2_windowed.csv",
+                        "/media/zsombi/Data/szakdoga/DB1/trainS19_A1_E3_windowed.csv"]
+        test_path_array = ['/media/zsombi/Data/szakdoga/DB1/test/trainS9_A1_E3_windowed.csv',
+                       '/media/zsombi/Data/szakdoga/DB1/test/trainS9_A1_E1_windowed.csv',
+                       '/media/zsombi/Data/szakdoga/DB1/test/trainS9_A1_E2_windowed.csv']
 
         model = Sequential()
         model.add(Dense(output_dim=4000, input_shape=(1280,), init='normal'))
@@ -202,7 +208,6 @@ if __name__=="__main__":
         label_data_batch = np.empty((batch_size, 14))
 
         for i in range(batch_size):
-
             emg_string = ''
             glove_string = ''
             label_string = ''
@@ -265,6 +270,5 @@ if __name__=="__main__":
             train_data_batch[i] = train_data
             label_data_batch[i] = label_data
 
-    33333333333333666
         evaluation = model.evaluate(train_data_batch, label_data_batch, batch_size=batch_size, verbose=1)
         print('Summary: Loss over the test dataset: %.2f, Accuracy: %.2f' % (evaluation[0], evaluation[1]))
